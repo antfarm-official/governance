@@ -4,13 +4,7 @@ pragma solidity ^0.8.17;
 // import files here in your tests instead of from src
 
 // contracts
-import {Clock} from "@clock/Clock.sol";
-import {Lock} from "@escrow/Lock.sol";
-import {ExitQueue} from "@escrow/ExitQueue.sol";
-import {VotingEscrow} from "@escrow/VotingEscrowIncreasing.sol";
-import {SimpleGaugeVoter} from "@voting/SimpleGaugeVoter.sol";
-import {SimpleGaugeVoterSetup} from "@voting/SimpleGaugeVoterSetup.sol";
-import {QuadraticIncreasingEscrow} from "@escrow/QuadraticIncreasingEscrow.sol";
+import {QuadraticIncreasingEscrow, Clock, Lock, ExitQueue, VotingEscrow, SimpleGaugeVoter, SimpleGaugeVoterSetup} from "@voting/SimpleGaugeVoterSetup.sol";
 import {GaugesDaoFactory, Deployment, DeploymentParameters, TokenParameters, GaugePluginSet} from "@factory/GaugesDaoFactory.sol";
 
 // interfaces
@@ -20,3 +14,5 @@ import {IExitQueue, ITicket, IExitQueueErrorsAndEvents} from "@escrow-interfaces
 import {ILock, IWhitelistErrors, IWhitelistEvents} from "@escrow-interfaces/ILock.sol";
 import {IVotingEscrowIncreasing, IWithdrawalQueueErrors, ILockedBalanceIncreasing, IVotingEscrowEventsStorageErrorsEvents} from "@escrow-interfaces/IVotingEscrowIncreasing.sol";
 import {IGaugeVote, ISimpleGaugeVoterStorageEventsErrors} from "@voting/ISimpleGaugeVoter.sol";
+
+import {DeployGauges} from "script/DeployGauges.s.sol";

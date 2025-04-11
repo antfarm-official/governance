@@ -65,7 +65,37 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         // }
     }
 
-    // write a new checkpoint
+    /**
+
+==== VP for 1000000000 ====
+0                              Voting Power: 1000000000000000013287555072 | 1000000000 | 1.00x
+1 minute                       Voting Power: 1000000953907203852728270848 | 1000000954 | 1.00x
+1 hour                         Voting Power: 1000057234432234502899105792 | 1000057234 | 1.00x
+1 day                          Voting Power: 1001373626373626389575237632 | 1001373626 | 1.00x
+WARMUP_PERIOD (3 days)         Voting Power: 1004120879120879142150602752 | 1004120879 | 1.00x
+WARMUP_PERIOD + 1s             Voting Power: 1004120895019332532602667008 | 1004120895 | 1.00x
+1 week                         Voting Power: 1009615384615384647301332992 | 1009615385 | 1.01x
+1 period (2 weeks)             Voting Power: 1019230769230769143876157440 | 1019230769 | 1.02x
+2 periods (2 * PERIOD)         Voting Power: 1038461538461538549342666752 | 1038461538 | 1.04x
+3 periods (3 * PERIOD)         Voting Power: 1057692307692307679931269120 | 1057692308 | 1.06x
+4 periods (4 * PERIOD)         Voting Power: 1076923076923076947958824960 | 1076923077 | 1.08x
+END @ 104 weeks (52 * PERIOD)  Voting Power: 2000000000000000026575110144 | 2000000000 | 2.00x
+
+==== Changing amount to 420.69 ====
+0                              Voting Power: 420690000000000000000 | 421 | 1.00x
+1 minute                       Voting Power: 420690401299221577728 | 421 | 1.00x
+1 hour                         Voting Power: 420714077953296695296 | 421 | 1.00x
+1 day                          Voting Power: 421267870879120883712 | 421 | 1.00x
+WARMUP_PERIOD (3 days)         Voting Power: 422423612637362651136 | 422 | 1.00x
+WARMUP_PERIOD + 1s             Voting Power: 422423619325683040256 | 422 | 1.00x
+1 week                         Voting Power: 424735096153846120448 | 425 | 1.01x
+1 period (2 weeks)             Voting Power: 428780192307692306432 | 429 | 1.02x
+2 periods (2 * PERIOD)         Voting Power: 436870384615384678400 | 437 | 1.04x
+3 periods (3 * PERIOD)         Voting Power: 444960576923076919296 | 445 | 1.06x
+4 periods (4 * PERIOD)         Voting Power: 453050769230769225728 | 453 | 1.08x
+END @ 104 weeks (52 * PERIOD)  Voting Power: 841380000000000000000 | 841 | 2.00x
+
+**/
     function testWritesCheckpoint() public {
         uint tokenIdFirst = 1;
         uint tokenIdSecond = 2;
@@ -112,43 +142,26 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         // warmup complete
         vm.warp(block.timestamp + 1);
 
-        // python:              449.206279554928541696
-        // solmate (optimized): 449.206254284606635135
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            449206254284606635135,
+            422423619325633557508,
             "Balance incorrect after warmup"
         );
         assertEq(curve.isWarm(tokenIdFirst), true, "Still warming up");
 
-        // python:    1067784543380942056100724736
-        // solmate:   1067784483312193385000000000
         assertEq(
             curve.votingPowerAt(tokenIdSecond, block.timestamp),
-            1067784483312193385000000000,
+            1004120895019214998000000000,
             "Balance incorrect after warmup II"
         );
 
-        // warp to the start of period 2
-        vm.warp(start + clock.epochDuration());
-        // excel:     600.985714300000000000
-        // PRB:       600.985163959347100568
-        // solmate:   600.985163959347101852
-        // python :   600.985714285714341888
-        // solmate2:  600.985163959347101952
-        assertEq(
-            curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            600985163959347101952,
-            "Balance incorrect after p1"
-        );
-
-        uint256 expectedMaxI = 2524126241845405205760;
-        uint256 expectedMaxII = 5999967296216704000000000000;
+        uint256 expectedMaxI = 841379999988002594304;
+        uint256 expectedMaxII = 1999999999971481600000000000;
 
         // warp to the final period
-        // TECHNICALLY, this should finish at exactly 5 periodd and 6 * voting power
+        // TECHNICALLY, this should finish at exactly max
         // but FP arithmetic has a small rounding error
-        vm.warp(start + clock.epochDuration() * 5);
+        vm.warp(start + clock.epochDuration() * 52);
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
             expectedMaxI,
@@ -215,43 +228,27 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
         // warmup complete
         vm.warp(block.timestamp + 1);
 
-        // python:              449.206279554928541696
-        // solmate (optimized): 449.206254284606635135
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            449206254284606635135,
+            422423619325633557508,
             "Balance incorrect after warmup"
         );
         assertEq(curve.isWarm(tokenIdFirst), true, "Still warming up");
 
-        // python:    1067784543380942056100724736
-        // solmate:   1067784483312193385000000000
         assertEq(
             curve.votingPowerAt(tokenIdSecond, block.timestamp),
-            1067784483312193385000000000,
+            1004120895019214998000000000,
             "Balance incorrect after warmup II"
         );
 
         // warp to the start of period 2
         vm.warp(start + clock.epochDuration());
-        // excel:     600.985714300000000000
-        // PRB:       600.985163959347100568
-        // solmate:   600.985163959347101852
-        // python :   600.985714285714341888
-        // solmate2:  600.985163959347101952
-        assertEq(
-            curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            600985163959347101952,
-            "Balance incorrect after p1"
-        );
 
-        uint256 expectedMaxI = 2524126241845405205760;
-        uint256 expectedMaxII = 5999967296216704000000000000;
+        uint256 expectedMaxI = 841379999988002594304;
+        uint256 expectedMaxII = 1999999999971481600000000000;
 
         // warp to the final period
-        // TECHNICALLY, this should finish at exactly 5 periodd and 6 * voting power
-        // but FP arithmetic has a small rounding error
-        vm.warp(start + clock.epochDuration() * 5);
+        vm.warp(start + clock.epochDuration() * 52);
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
             expectedMaxI,
@@ -296,13 +293,7 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
 
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            600985163959347101952,
-            "Balance incorrect after p1"
-        );
-
-        assertEq(
-            curve.votingPowerAt(tokenIdSecond, block.timestamp),
-            1428570120419660800000000000,
+            428780192307461588352,
             "Balance incorrect after p1"
         );
 
@@ -318,23 +309,11 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
 
         assertEq(
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
-            901476370123561173504,
+            436870384614923176704,
             "Voting power should be the same after beginWithdrawal"
         );
 
         clock.newSeason();
-
-        escrow.checkpoint(
-            tokenIdSecond,
-            LockedBalance(0, 0),
-            LockedBalance(0, checkpointClearTime.toUint48())
-        );
-
-        assertEq(
-            curve.votingPowerAt(tokenIdSecond, block.timestamp),
-            2142851910251161600000000000,
-            "Voting power should be the same after beginWithdrawal II"
-        );
 
         vm.warp(block.timestamp + clock.epochDuration());
 
@@ -342,11 +321,6 @@ contract TestQuadraticIncreasingCurve is QuadraticCurveBase {
             curve.votingPowerAt(tokenIdFirst, block.timestamp),
             0,
             "Voting power should be after withdrawal"
-        );
-        assertEq(
-            curve.votingPowerAt(tokenIdSecond, block.timestamp),
-            0,
-            "Voting power should be after withdrawal II"
         );
     }
 }

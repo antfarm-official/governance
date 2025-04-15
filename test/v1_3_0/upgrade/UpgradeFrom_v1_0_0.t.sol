@@ -39,7 +39,7 @@ import {
 } from "test/v1_0_0/versions.sol";
 import {
     Clock as ClockV1_2_0,
-    QuadraticIncreasingEscrow as LinearEscrowCurve,
+    Curve as LinearEscrowCurve,
     VotingEscrow as VotingEscrowV1_2_0,
     EscrowIVotesAdapter,
     Lock as LockV1_2_0,
@@ -219,6 +219,9 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote, FixedPointBase {
         // upgrade contracts
         _upgrade();
 
+        assertTrue(escrow.paused());
+        unpause();
+
         uint256 vp0After = escrow.votingPower(aliceToken);
         uint256 vp1After = escrow.votingPower(bobToken);
 
@@ -293,6 +296,9 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote, FixedPointBase {
     function test_upgradeAndMerge() public {
         _upgrade();
 
+        assertTrue(escrow.paused());
+        unpause();
+
         _mockApprovedOwner(address(this), aliceToken);
         _mockApprovedOwner(address(this), bobToken);
 
@@ -323,6 +329,9 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote, FixedPointBase {
         uint256 vpBeforeUpgrade = escrow.votingPower(aliceToken);
 
         _upgrade();
+
+        assertTrue(escrow.paused());
+        unpause();
 
         _mockApprovedOwner(address(this), aliceToken);
 
@@ -519,6 +528,13 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote, FixedPointBase {
 
         vm.roll(block.number + 1); // mint one block
         return _factory;
+    }
+
+    function unpause() private {
+        vm.startPrank(address(dao)); 
+        dao.grant(address(escrow), address(this), escrow.PAUSER_ROLE());
+        vm.stopPrank();
+        escrow.unpause();
     }
 
     function _mockApprovedOwner(address _who, uint256 _tokenId) private {

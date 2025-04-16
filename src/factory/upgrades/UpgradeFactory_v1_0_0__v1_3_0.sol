@@ -148,7 +148,6 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
 
         DeploymentV1_0_0 memory oldDeployment = IFactory(factory).getDeployment();
 
-
         // init with the old contracts, as needed we will overwrite
         for (uint i = 0; i < oldDeployment.gaugeVoterPluginSets.length; i++) {
             GaugePluginSetV1_0_0 memory oldPluginSet = oldDeployment.gaugeVoterPluginSets[i];
@@ -222,11 +221,8 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
         options.referenceContract = "Lock.sol";
         Upgrades.validateUpgrade("Lock_v1_2_0.sol:LockV1_2_0", options);
 
-        // we choose to rename the tokenPointInterval variable
-        // TODO: should we?
-        options.unsafeAllowRenames = true;
         options.referenceContract = "QuadraticIncreasingCurve.sol:QuadraticIncreasingEscrow";
-        Upgrades.validateUpgrade("LinearIncreasingCurve.sol:LinearIncreasingEscrow", options);
+        Upgrades.validateUpgrade("LinearIncreasingCurve.sol:LinearIncreasingCurve", options);
     }
 
     function upgrade(
@@ -281,8 +277,6 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
         VotingEscrowV1_2_0 escrowUpgrade,
         LockV1_2_0 lockUpgrade
     ) internal {
-        DAO dao = deployment.dao;
-
         for (uint i = 0; i < parameters.tokenParameters.length; i++) {
             GaugePluginSet memory pluginSet = deployment.gaugeVoterPluginSets[i];
 
@@ -290,10 +284,18 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
             pluginSet.curve.upgradeTo(address(curveUpgrade));
             pluginSet.votingEscrow.upgradeTo(address(escrowUpgrade));
             pluginSet.nftLock.upgradeTo(address(lockUpgrade));
+
+            // We only need to pause escrow as other contracts' state changing 
+            // functions can only be called by escrow and ivotesAdapter. 
+            // Note that `AddressGaugeVoter` and `iVotesAdapter` are by default paused 
+            // at the time of deployment.
+            pluginSet.votingEscrow.pause();
         }
     }
 
     function _deployEscrowIVotesAdapter(address base) internal {
+        bool startPaused = true;
+
         // set the delegation mapper in the plugin set
         for (uint i = 0; i < deployment.gaugeVoterPluginSets.length; i++) {
             address delegation = base.deployUUPSProxy(
@@ -302,7 +304,8 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
                     (
                         address(deployment.dao),
                         address(deployment.gaugeVoterPluginSets[i].votingEscrow),
-                        address(deployment.gaugeVoterPluginSets[i].clock)
+                        address(deployment.gaugeVoterPluginSets[i].clock),
+                        startPaused
                     )
                 )
             );
@@ -363,7 +366,7 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
         uint pluginSetIndex
     ) public view returns (PermissionLib.MultiTargetPermission[] memory) {
         PermissionLib.MultiTargetPermission[]
-            memory permissions = new PermissionLib.MultiTargetPermission[](5);
+            memory permissions = new PermissionLib.MultiTargetPermission[](6);
 
         address here = address(this);
         GaugePluginSet memory p = deployment.gaugeVoterPluginSets[pluginSetIndex];
@@ -403,6 +406,14 @@ contract UpgradeGaugesFactoryV1_0_0__V1_3_0 {
         permissions[4] = PermissionLib.MultiTargetPermission({
             permissionId: p.nftLock.LOCK_ADMIN_ROLE(),
             where: address(p.nftLock),
+            who: here,
+            operation: _grantOrRevoke,
+            condition: PermissionLib.NO_CONDITION
+        });
+
+        permissions[5] = PermissionLib.MultiTargetPermission({
+            permissionId: p.votingEscrow.PAUSER_ROLE(),
+            where: address(p.votingEscrow),
             who: here,
             operation: _grantOrRevoke,
             condition: PermissionLib.NO_CONDITION

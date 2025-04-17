@@ -39,7 +39,7 @@ import {
 } from "test/v1_0_0/versions.sol";
 import {
     Clock as ClockV1_2_0,
-    QuadraticIncreasingEscrow as LinearEscrowCurve,
+    Curve as LinearEscrowCurve,
     VotingEscrow as VotingEscrowV1_2_0,
     EscrowIVotesAdapter,
     Lock as LockV1_2_0,
@@ -415,14 +415,24 @@ contract RegressionV1_0_0__to__V1_3_0 is Test, IGaugeVote, FixedPointBase {
             dao.applyMultiTargetPermissions(revoke0);
             dao.applyMultiTargetPermissions(revoke1);
 
-            // TODO: GIORGI this must be put in the factory but where ?
             dao.grant(
                 address(addressGaugeVoter),
                 address(dao),
                 addressGaugeVoter.GAUGE_ADMIN_ROLE()
             );
 
-            // AddressGaugeVoter is deployed with paused by default, so unpause.
+            dao.grant(address(escrow), address(dao), escrow.PAUSER_ROLE());
+            dao.grant(address(ivotesAdapter), address(dao), ivotesAdapter.DELEGATION_ADMIN_ROLE());
+
+            // After the upgrade, these contracts are paused.
+            // so we assert and then unpause, so tests can work.
+            assertTrue(escrow.paused());
+            assertTrue(ivotesAdapter.paused());
+            assertTrue(addressGaugeVoter.paused());
+
+            // unpause contracts.
+            escrow.unpause();
+            ivotesAdapter.unpause();
             addressGaugeVoter.unpause();
 
             // create gauge on the address gauge voter.

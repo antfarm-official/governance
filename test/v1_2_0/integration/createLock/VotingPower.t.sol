@@ -38,24 +38,13 @@ contract TestVotingPower is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage,
 
     function test_whenOnlyOneTokenPoint() public {
         // Given: no prior locks existing
-        // 1. votingPower should be 0 during warmup and equal to bias after warmup
-        // 2. votingPower shouldn't increase after end time.
-
         uint256 tokenId = escrow.createLock(Lock_1_Amount);
         uint256 weekStartTs = weekStartTs(block.timestamp);
         uint256 endTs = weekStartTs + maxTime;
 
         // 1
-        assertEq(curve.isWarm(tokenId), false);
-        assertVotingPower(tokenId, 0);
-
-        vm.warp(weekStartTs + warmupPeriod);
-        assertEq(curve.isWarm(tokenId), false);
-        assertVotingPower(tokenId, 0);
-
-        vm.warp(weekStartTs + warmupPeriod + 1);
         assertEq(curve.isWarm(tokenId), true);
-        assertVotingPower(tokenId, biasFP(Lock_1_Amount, block.timestamp - weekStartTs));
+        assertVotingPower(tokenId,  biasFP(Lock_1_Amount, block.timestamp - weekStartTs));
 
         // 2
         int256 maxVotingPower = biasFP(Lock_1_Amount, maxTime);
@@ -67,7 +56,6 @@ contract TestVotingPower is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage,
         uint256 weekStartTs = weekStartTs(block.timestamp);
         uint256 endTs = weekStartTs + maxTime;
         
-
         uint256 tokenId1 = escrow.createLock(Lock_1_Amount);
         uint256 tokenId2 = escrow.createLock(Lock_2_Amount);
 
@@ -75,7 +63,6 @@ contract TestVotingPower is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage,
 
         escrow.merge(tokenId1, tokenId2);
 
-        vm.warp(weekStartTs + warmupPeriod + 1);
         assertVotingPower(
             tokenId2,
             biasFP(Lock_1_Amount, block.timestamp - weekStartTs) +
@@ -99,7 +86,6 @@ contract TestVotingPower is IEscrowCurveTokenStorage, IEscrowCurveGlobalStorage,
         vm.warp(endTs + 1);
 
         escrow.merge(tokenId1, tokenId2);
-
 
         int256 maxVotingPower = biasFP(Lock_1_Amount, maxTime) +
                 biasFP(Lock_2_Amount, maxTime);

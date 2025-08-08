@@ -2,6 +2,7 @@ pragma solidity ^0.8.17;
 
 import {EscrowBase, IAddressGaugeVote} from "../../base/EscrowBase.sol";
 import {console2 as console} from "forge-std/console2.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 import {
     Clock,
@@ -115,7 +116,12 @@ contract TestMerge_DelegationAndVoter is
         assertFalse(ivotesAdapter.tokenIsDelegated(tokenId1));
         assertFalse(ivotesAdapter.tokenIsDelegated(tokenId2));
 
+        //  Ensure events are not emitted.
+        vm.recordLogs();
         escrow.merge(tokenId1, tokenId2);
+        _ensureNotEmitted(TokensDelegatedSignature);
+        _ensureNotEmitted(TokensUndelegatedSignature);
+
         assertEq(ivotesAdapter.getPastVotes(bob, block.timestamp), 0);
 
         assertFalse(ivotesAdapter.tokenIsDelegated(tokenId1));
@@ -138,7 +144,11 @@ contract TestMerge_DelegationAndVoter is
         assertFalse(ivotesAdapter.tokenIsDelegated(tokenId1));
         assertFalse(ivotesAdapter.tokenIsDelegated(tokenId2));
 
+        // Ensure events are not emitted.
+        vm.recordLogs();
         escrow.merge(tokenId1, tokenId2);
+        _ensureNotEmitted(TokensDelegatedSignature);
+        _ensureNotEmitted(TokensUndelegatedSignature);
 
         assertEq(ivotesAdapter.getPastVotes(bob, block.timestamp), 0);
         assertFalse(ivotesAdapter.tokenIsDelegated(tokenId1));
@@ -159,7 +169,14 @@ contract TestMerge_DelegationAndVoter is
         assertTrue(ivotesAdapter.tokenIsDelegated(tokenId2));
 
         uint256 pastVotesBefore = ivotesAdapter.getPastVotes(bob, block.timestamp);
+
+        // It's important to also assert that TokensDelegated event was not emitted.
+        vm.expectEmit();
+        emit TokensUndelegated(alice, bob, _getTokenIdList(tokenId1));
+        
         escrow.merge(tokenId1, tokenId2);
+        _ensureNotEmitted(TokensDelegatedSignature);
+
         uint256 pastVotesAfter = ivotesAdapter.getPastVotes(bob, block.timestamp);
 
         assertFalse(ivotesAdapter.tokenIsDelegated(tokenId1));
@@ -188,7 +205,15 @@ contract TestMerge_DelegationAndVoter is
             ivotesAdapter.getPastVotes(bob, block.timestamp),
             bias(_amount2, block.timestamp - weekStartTs(block.timestamp))
         );
+
+        vm.expectEmit();
+        emit TokensDelegated(alice, bob, _getTokenIdList(tokenId1));
+        vm.expectEmit();
+        emit TokensUndelegated(alice, bob, _getTokenIdList(tokenId2));
+
+        vm.recordLogs();
         escrow.merge(tokenId2, tokenId1);
+
         assertEq(
             ivotesAdapter.getPastVotes(bob, block.timestamp),
             bias(
@@ -203,7 +228,7 @@ contract TestMerge_DelegationAndVoter is
         assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 1);
         vm.stopPrank();
     }
-
+    
     function testFuzz_Merge_WhenFromIsNotDelegatedAndToIs(
         uint160 _amount1,
         uint160 _amount2
@@ -220,7 +245,13 @@ contract TestMerge_DelegationAndVoter is
             ivotesAdapter.getPastVotes(bob, block.timestamp),
             bias(_amount2, block.timestamp - weekStartTs(block.timestamp))
         );
+
+        // Ensure events are not emitted.
+        vm.recordLogs();
         escrow.merge(tokenId1, tokenId2);
+        _ensureNotEmitted(TokensDelegatedSignature);
+        _ensureNotEmitted(TokensUndelegatedSignature);
+
         assertEq(
             ivotesAdapter.getPastVotes(bob, block.timestamp),
             bias(

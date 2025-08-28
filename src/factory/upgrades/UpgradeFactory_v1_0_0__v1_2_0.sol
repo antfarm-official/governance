@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.17;
 
+import {PluginSetupProcessor} from "@aragon/osx/framework/plugin/setup/PluginSetupProcessor.sol";
+import {PluginRepoFactory} from "@aragon/osx/framework/plugin/repo/PluginRepoFactory.sol";
 import {PluginRepo} from "@aragon/osx/framework/plugin/repo/PluginRepo.sol";
 import {DAO} from "@aragon/osx/core/dao/DAO.sol";
 import {PermissionLib} from "@aragon/osx-commons-contracts/src/permission/PermissionLib.sol";
@@ -10,7 +12,8 @@ import {ExitQueue} from "@setup/GaugeVoterSetup.sol";
 import {
     Deployment as DeploymentV1_0_0,
     DeploymentParameters as DeploymentParametersV1_0_0,
-    GaugePluginSet as GaugePluginSetV1_0_0
+    GaugePluginSet as GaugePluginSetV1_0_0,
+    GaugeVoterSetup
 } from "../GaugesDaoFactory.sol";
 
 import {
@@ -25,8 +28,8 @@ import {
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {ProxyLib} from "@libs/ProxyLib.sol";
 
-import {Upgrades} from "@foundry-upgrades/LegacyUpgrades.sol";
-import {Options} from "@foundry-upgrades/Options.sol";
+import {Upgrades} from "@foundry-upgrades/src/LegacyUpgrades.sol";
+import {Options} from "@foundry-upgrades/src/Options.sol";
 
 import {CurveConstantLib} from "@libs/CurveConstantLib.sol";
 

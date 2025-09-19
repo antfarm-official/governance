@@ -23,7 +23,7 @@ import {MockPluginSetupProcessor as PluginSetupProcessor} from "./MockPSP.sol";
 
 // import {DAORegistry} from "./DAORegistry.sol";
 
-/// @title MockDAOFactory
+/// @title MockDAOFactory (uses old daofactory of osx)
 /// @dev spoof of DAOFactory with minimal dependencies
 /// Best to use with MockPSP: this allows setting of a single setup contract manually to avoid
 /// all the other logic, however means you cannot easily deploy the DAO with multiple plugins

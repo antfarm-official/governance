@@ -1,6 +1,8 @@
 pragma solidity ^0.8.17;
 
 import {EscrowBase, IAddressGaugeVote} from "../../base/EscrowBase.sol";
+import {console2 as console} from "forge-std/console2.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 import {
     Clock,
@@ -24,27 +26,25 @@ contract TestMerge_DelegationAndVoter is
     IEscrowCurveGlobalStorage,
     EscrowBase
 {
+    address gauge = address(0x777);
+    address alice = address(0x123);
+    address bob = address(0x192);
+
     function setUp() public override {
         super.setUp();
 
-        super.mintAndApproveEscrow();
+        super.mintAndApproveEscrow(type(uint256).max);
+
+        vm.warp(2 weeks + 1 hours + 1);
+        voter.createGauge(gauge, "metadata");
+        escrow.enableSplit();
     }
 
     function test_Merge_CorrectlyUpdatesDelegationAndVotes() public {
-        vm.warp(1);
-
-        address alice = address(0x123);
-
         uint256 amount1 = 15e18;
         uint256 amount2 = 20e18;
 
         token.transfer(alice, amount1 + amount2);
-
-        address gauge = address(0x777);
-
-        // activate cp & warp to an active window
-        vm.warp(2 weeks + 1 hours + 1);
-        voter.createGauge(gauge, "metadata");
 
         // alice creates 2 locks(nfts), delegates to herself and votes.
         {
@@ -101,5 +101,178 @@ contract TestMerge_DelegationAndVoter is
         assertFalse(ivotesAdapter.tokenIsDelegated(1));
         assertTrue(ivotesAdapter.tokenIsDelegated(2));
         assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 1);
+    }
+
+    function testFuzz_Merge_WhenTokensAreNotDelegated_AndDelegateeNotSet(
+        uint160 _amount1,
+        uint160 _amount2
+    ) public {
+        _approve(_amount1, _amount2);
+
+        vm.startPrank(alice);
+        uint256 tokenId1 = escrow.createLock(_amount1);
+        uint256 tokenId2 = escrow.createLock(_amount2);
+
+        assertFalse(ivotesAdapter.tokenIsDelegated(tokenId1));
+        assertFalse(ivotesAdapter.tokenIsDelegated(tokenId2));
+
+        //  Ensure events are not emitted.
+        vm.recordLogs();
+        escrow.merge(tokenId1, tokenId2);
+        _ensureNotEmitted(TokensDelegatedSignature);
+        _ensureNotEmitted(TokensUndelegatedSignature);
+
+        assertEq(ivotesAdapter.getPastVotes(bob, block.timestamp), 0);
+
+        assertFalse(ivotesAdapter.tokenIsDelegated(tokenId1));
+        assertFalse(ivotesAdapter.tokenIsDelegated(tokenId2));
+        assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 0);
+        vm.stopPrank();
+    }
+
+    function testFuzz_Merge_WhenTokensAreNotDelegated_ButDelegateeSet(
+        uint160 _amount1,
+        uint160 _amount2
+    ) public {
+        _approve(_amount1, _amount2);
+
+        vm.startPrank(alice);
+        uint256 tokenId1 = escrow.createLock(_amount1);
+        uint256 tokenId2 = escrow.createLock(_amount2);
+        ivotesAdapter.setDelegateAddress(bob);
+
+        assertFalse(ivotesAdapter.tokenIsDelegated(tokenId1));
+        assertFalse(ivotesAdapter.tokenIsDelegated(tokenId2));
+
+        // Ensure events are not emitted.
+        vm.recordLogs();
+        escrow.merge(tokenId1, tokenId2);
+        _ensureNotEmitted(TokensDelegatedSignature);
+        _ensureNotEmitted(TokensUndelegatedSignature);
+
+        assertEq(ivotesAdapter.getPastVotes(bob, block.timestamp), 0);
+        assertFalse(ivotesAdapter.tokenIsDelegated(tokenId1));
+        assertFalse(ivotesAdapter.tokenIsDelegated(tokenId2));
+        assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 0);
+        vm.stopPrank();
+    }
+
+    function testFuzz_Merge_WhenBothTokensAreDelegated(uint160 _amount1, uint160 _amount2) public {
+        _approve(_amount1, _amount2);
+
+        vm.startPrank(alice);
+        ivotesAdapter.setDelegateAddress(bob);
+        uint256 tokenId1 = escrow.createLock(_amount1);
+        uint256 tokenId2 = escrow.createLock(_amount2);
+
+        assertTrue(ivotesAdapter.tokenIsDelegated(tokenId1));
+        assertTrue(ivotesAdapter.tokenIsDelegated(tokenId2));
+
+        uint256 pastVotesBefore = ivotesAdapter.getPastVotes(bob, block.timestamp);
+
+        // It's important to also assert that TokensDelegated event was not emitted.
+        vm.expectEmit();
+        emit TokensUndelegated(alice, bob, _getTokenIdList(tokenId1));
+        
+        escrow.merge(tokenId1, tokenId2);
+        _ensureNotEmitted(TokensDelegatedSignature);
+
+        uint256 pastVotesAfter = ivotesAdapter.getPastVotes(bob, block.timestamp);
+
+        assertFalse(ivotesAdapter.tokenIsDelegated(tokenId1));
+        assertTrue(ivotesAdapter.tokenIsDelegated(tokenId2));
+        assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 1);
+        assertEq(pastVotesBefore, pastVotesAfter);
+        vm.stopPrank();
+    }
+
+    function testFuzz_Merge_WhenFromIsDelegatedAndToIsNot(
+        uint160 _amount1,
+        uint160 _amount2
+    ) public {
+        _approve(_amount1, _amount2);
+
+        vm.startPrank(alice);
+        uint256 tokenId1 = escrow.createLock(_amount1);
+
+        ivotesAdapter.setDelegateAddress(bob);
+        uint256 tokenId2 = escrow.createLock(_amount2);
+
+        assertFalse(ivotesAdapter.tokenIsDelegated(tokenId1));
+        assertTrue(ivotesAdapter.tokenIsDelegated(tokenId2));
+
+        assertEq(
+            ivotesAdapter.getPastVotes(bob, block.timestamp),
+            bias(_amount2, block.timestamp - weekStartTs(block.timestamp))
+        );
+
+        vm.expectEmit();
+        emit TokensDelegated(alice, bob, _getTokenIdList(tokenId1));
+        vm.expectEmit();
+        emit TokensUndelegated(alice, bob, _getTokenIdList(tokenId2));
+
+        vm.recordLogs();
+        escrow.merge(tokenId2, tokenId1);
+
+        assertEq(
+            ivotesAdapter.getPastVotes(bob, block.timestamp),
+            bias(
+                uint256(_amount1) + uint256(_amount2),
+                block.timestamp - weekStartTs(block.timestamp)
+            )
+        );
+
+        assertTrue(ivotesAdapter.tokenIsDelegated(tokenId1));
+        assertFalse(ivotesAdapter.tokenIsDelegated(tokenId2));
+
+        assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 1);
+        vm.stopPrank();
+    }
+    
+    function testFuzz_Merge_WhenFromIsNotDelegatedAndToIs(
+        uint160 _amount1,
+        uint160 _amount2
+    ) public {
+        _approve(_amount1, _amount2);
+
+        vm.startPrank(alice);
+        uint256 tokenId1 = escrow.createLock(_amount1);
+
+        ivotesAdapter.setDelegateAddress(bob);
+        uint256 tokenId2 = escrow.createLock(_amount2);
+
+        assertEq(
+            ivotesAdapter.getPastVotes(bob, block.timestamp),
+            bias(_amount2, block.timestamp - weekStartTs(block.timestamp))
+        );
+
+        // Ensure events are not emitted.
+        vm.recordLogs();
+        escrow.merge(tokenId1, tokenId2);
+        _ensureNotEmitted(TokensDelegatedSignature);
+        _ensureNotEmitted(TokensUndelegatedSignature);
+
+        assertEq(
+            ivotesAdapter.getPastVotes(bob, block.timestamp),
+            bias(
+                uint256(_amount1) + uint256(_amount2),
+                block.timestamp - weekStartTs(block.timestamp)
+            )
+        );
+
+        assertFalse(ivotesAdapter.tokenIsDelegated(tokenId1));
+        assertTrue(ivotesAdapter.tokenIsDelegated(tokenId2));
+
+        assertEq(ivotesAdapter.numberOfDelegatedTokens(alice), 1);
+        vm.stopPrank();
+    }
+
+    function _approve(uint160 _amount1, uint160 _amount2) private {
+        vm.assume(_amount1 != 0 && _amount2 != 0);
+        uint256 total = uint256(_amount1) + uint256(_amount2);
+        token.transfer(alice, total);
+
+        vm.prank(alice);
+        token.approve(address(escrow), total);
     }
 }

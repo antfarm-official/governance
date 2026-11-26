@@ -1,6 +1,6 @@
-# Aragon VE Governance Hub
+# Antfarm VE Governance Hub
 
-Welcome to Aragon's veGovernance Plugin - a flexible, modular and secure system which can be used to create custom DAOs that foster a strong alignment between token holders and capital flows.
+Welcome to Antfarm's veGovernance Plugin - a flexible, modular and secure system which can be used to create custom DAOs that foster a strong alignment between token holders and capital flows.
 
 ## Setup
 
@@ -45,7 +45,7 @@ Fork testing has 2 modes:
 
 2. "existing-factory" will run against the live network fork, using the existing factory & therefore the existing contracts. See `make test-fork-factory-testnet`, `make test-fork-factory-prodnet` and simmilar
 
-In both cases, you will need to find the correct Aragon OSx contracts for the chain you wish to fork against. These can be found in the [OSx commons repo](https://github.com/aragon/osx-commons/tree/main/configs/src/deployments/json)
+In both cases, you will need to find the correct Antfarm OSx contracts for the chain you wish to fork against. These can be found in the [OSx commons repo](https://github.com/antfarm-official/osx-commons/tree/main/configs/src/deployments/json)
 
 > If running frequent fork tests it's recommended to pass a block number to enable caching
 
@@ -102,7 +102,7 @@ Check the available make targets to simulate and deploy the smart contracts:
   - The given OSx addresses:
     - [ ] Exist on the target network
     - [ ] Contain the latest stable official version of the OSx DAO implementation, the Plugin Setup Processor and the Plugin Repo Factory
-    - [ ] I have verified the values on https://www.npmjs.com/package/@aragon/osx-commons-configs?activeTab=code > `/@aragon/osx-commons-configs/dist/deployments/json/`
+    - [ ] I have verified the values on https://www.npmjs.com/package/@antfarm-official/osx-commons-configs?activeTab=code > `/@antfarm-official/osx-commons-configs/dist/deployments/json/`
 - [ ] I have updated the `CurveConstantLib` and `Clock` with any new constants.
 - [ ] All my unit tests pass (`make test`)
 - **Target test network**
@@ -203,7 +203,7 @@ The primary contracts in the governance hub are found in the `src` directory. Th
 - `VotingEscrowIncreasing.sol`: ERC721 veNFT designed to be used with escrow systems that reward users for longer lock times.
 - `GaugeVoter.sol`: allows split voting across arbitrary options. Votes are simply registered in the gauge voter, they do not perform any onchain actions
 
-The main workflow in the Aragon VE Governance build is as follows:
+The main workflow in the Antfarm VE Governance build is as follows:
 
 ## Escrow
 

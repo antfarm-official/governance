@@ -2,7 +2,7 @@
 
 Welcome to Antfarm's Governance Plugin - a flexible, modular and secure system which can be used to create custom DAOs that foster a strong alignment between token holders and capital flows.
 
-## Setup
+## Setup 
 
 To get started, ensure that [Foundry](https://getfoundry.sh/) is installed on your computer.
 
